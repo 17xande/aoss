@@ -28,18 +28,8 @@ func New(host, path string) *Request {
 	}
 }
 
-func (r *Request) Get() (string, error) {
-	req, err := http.NewRequest(http.MethodGet, r.URL.String(), nil)
-	if err != nil {
-		return "", fmt.Errorf("can't create get request: %w", err)
-	}
-
-	res, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return "", fmt.Errorf("can't read response body: %w", err)
-	}
-
-	resBody, err := io.ReadAll(res.Body)
+func (r *Request) GetPretty() (string, error) {
+	resBody, err := r.Get()
 	if err != nil {
 		return "", fmt.Errorf("can't read response body: %w", err)
 	}
@@ -50,6 +40,20 @@ func (r *Request) Get() (string, error) {
 	}
 
 	return pretty, nil
+}
+
+func (r *Request) Get() ([]byte, error) {
+	req, err := http.NewRequest(http.MethodGet, r.URL.String(), nil)
+	if err != nil {
+		return nil, fmt.Errorf("can't create get request: %w", err)
+	}
+
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("can't read response body: %w", err)
+	}
+
+	return io.ReadAll(res.Body)
 }
 
 func jsonIndent(data []byte) (string, error) {

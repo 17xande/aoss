@@ -1,15 +1,11 @@
 package lldp
 
-import "github.com/spf13/cobra"
-
-type lldpOptions struct {
-	PortID string
-	VlanID int
-}
+import (
+	"github.com/17xande/aoss/pkg/cmd/lldp/remote"
+	"github.com/spf13/cobra"
+)
 
 func NewCmdLldp() *cobra.Command {
-	opts := &lldpOptions{}
-
 	cmd := &cobra.Command{
 		Use:     "lldp",
 		Short:   "Work with the switch's LLDP service.",
@@ -19,7 +15,7 @@ func NewCmdLldp() *cobra.Command {
 		RunE:    runE,
 	}
 
-	cmd.Flags().IntVarP(&opts.VlanID, "vlan ID", "v", 0, "vlan ID")
+	cmd.AddCommand(remote.NewCmdRemote())
 
 	return cmd
 }

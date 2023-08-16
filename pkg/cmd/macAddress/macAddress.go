@@ -1,15 +1,25 @@
 package macAddress
 
 import (
+	"encoding/json"
 	"fmt"
-	"net/url"
 
 	"github.com/17xande/aoss/internal/api/request"
 	"github.com/spf13/cobra"
 )
 
-type Response struct {
-	Uri        url.URL
+type response struct {
+	CollectionResult     `json:"collection_result"`
+	MacTableEntryElement []MacTableEntryElement `json:"mac_table_entry_element"`
+}
+
+type CollectionResult struct {
+	TotalElementsCount    int `json:"total_elements_count"`
+	FilteredElementsCount int `json:"filtered_elements_count"`
+}
+
+type MacTableEntryElement struct {
+	Uri        string
 	MacAddress string `json:"mac_address"`
 	PortID     string `json:"port_id"`
 	VlanID     int    `json:"vlan_id"`
@@ -30,11 +40,7 @@ func NewCmdMacAddress() *cobra.Command {
 		Example: "TODO:",
 		GroupID: "services",
 		RunE: func(c *cobra.Command, args []string) error {
-			host, err := c.Flags().GetString("host")
-			if err != nil {
-				return fmt.Errorf("can't get host flag: %w", err)
-			}
-
+			host, _ := c.Flags().GetString("host")
 			var r *request.Request
 
 			if opts.port != "" && opts.mac != "" {
@@ -57,19 +63,27 @@ func NewCmdMacAddress() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVarP(&opts.port, "port", "p", "", "port")
-	cmd.Flags().StringVarP(&opts.mac, "mac", "m", "", "mac address")
+	cmd.Flags().StringVarP(&opts.port, "port", "p", "", "Port ID")
+	cmd.Flags().StringVarP(&opts.mac, "mac", "m", "", "MAC Address")
 
 	return cmd
 }
 
 func runE(r *request.Request) error {
-	res, err := r.Get()
+	body, err := r.Get()
 	if err != nil {
 		return fmt.Errorf("could not complete API request: %w", err)
 	}
 
-	fmt.Println(res)
+	var res response
+	err = json.Unmarshal(body, &res)
+	if err != nil {
+		return fmt.Errorf("can't unmarshal JSON response: %w", err)
+	}
+
+	fmt.Printf("%#v\n", res)
+
+	// fmt.Println(res)
 
 	return nil
 }

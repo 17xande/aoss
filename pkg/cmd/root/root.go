@@ -25,8 +25,9 @@ $ aoss vlans 22`,
 		},
 	}
 
-	cmd.PersistentFlags().Bool("help", false, "Show help for command")
-	cmd.PersistentFlags().StringP("host", "h", "", "Switch's hostname or IP address")
+	cmd.PersistentFlags().BoolP("help", "H", false, "Show help for command")
+	cmd.PersistentFlags().StringP("host", "h", "", "Switch's hostname or IP address (required)")
+	cmd.MarkPersistentFlagRequired("host")
 
 	// Groups:
 	cmd.AddGroup(&cobra.Group{
