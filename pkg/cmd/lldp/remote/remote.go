@@ -28,8 +28,8 @@ type LldpRemoteDeviceElement struct {
 	SystemName              string `json:"system_name"`
 	SystemDescription       string `json:"system_description"`
 	PvID                    int
-	CapabilitiesSupported   Capabilities
-	CapabilitiesEnambled    Capabilities
+	CapabilitiesSupported   Capabilities `json:"capabilities_supported"`
+	CapabilitiesEnabled     Capabilities `json:"capabilities_enabled"`
 	RemoteManagementAddress `json:"remote_management_address"`
 	PoePlusInfo             `json:"poe_plus_info"`
 }

@@ -7,7 +7,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type response struct {
+type Response struct {
 	request.CollectionResult `json:"collection_result"`
 	MacTableEntryElement     []MacTableEntryElement `json:"mac_table_entry_element"`
 }
@@ -41,7 +41,7 @@ func NewCmdMacAddress() *cobra.Command {
 			}
 
 			if opts.port != "" {
-				r := request.New(host, fmt.Sprintf("ports/%s/mac-table", opts.port), response{})
+				r := request.New(host, fmt.Sprintf("ports/%s/mac-table", opts.port), Response{})
 				return runE(r)
 			}
 
@@ -51,7 +51,7 @@ func NewCmdMacAddress() *cobra.Command {
 			}
 
 			if opts.port == "" && opts.mac == "" {
-				r := request.New(host, fmt.Sprintf("ports/%s/mac-table", opts.port), response{})
+				r := request.New(host, fmt.Sprintf("ports/%s/mac-table", opts.port), Response{})
 				return runE(r)
 			}
 
@@ -65,7 +65,7 @@ func NewCmdMacAddress() *cobra.Command {
 	return cmd
 }
 
-func runE[T response | MacTableEntryElement](r *request.Request[T]) error {
+func runE[T Response | MacTableEntryElement](r *request.Request[T]) error {
 	res, err := r.GetUnmarshalled()
 	if err != nil {
 		return fmt.Errorf("couldn't complete API request: %w", err)
