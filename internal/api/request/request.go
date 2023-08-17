@@ -12,23 +12,30 @@ import (
 // Eg: http://192.168.0.1/rest/v1/
 const UrlAPI = "%s://%s/rest/%s/%s"
 
-type Request struct {
-	URL url.URL
+type Request[T any] struct {
+	URL      url.URL
+	Response *T
 }
 
-func New(host, path string) *Request {
+type CollectionResult struct {
+	TotalElementsCount    int `json:"total_elements_count"`
+	FilteredElementsCount int `json:"filtered_elements_count"`
+}
+
+func New[T any](host, path string, response T) *Request[T] {
 	u := url.URL{
 		Scheme: "http",
 		Host:   host,
 		Path:   fmt.Sprintf("/rest/%s/%s", "v8", path),
 	}
 
-	return &Request{
-		URL: u,
+	return &Request[T]{
+		URL:      u,
+		Response: &response,
 	}
 }
 
-func (r *Request) GetPretty() (string, error) {
+func (r *Request[T]) GetPretty() (string, error) {
 	resBody, err := r.Get()
 	if err != nil {
 		return "", fmt.Errorf("can't read response body: %w", err)
@@ -42,7 +49,7 @@ func (r *Request) GetPretty() (string, error) {
 	return pretty, nil
 }
 
-func (r *Request) Get() ([]byte, error) {
+func (r *Request[T]) Get() ([]byte, error) {
 	req, err := http.NewRequest(http.MethodGet, r.URL.String(), nil)
 	if err != nil {
 		return nil, fmt.Errorf("can't create get request: %w", err)
@@ -63,4 +70,17 @@ func jsonIndent(data []byte) (string, error) {
 	}
 
 	return pretty.String(), nil
+}
+
+func (r *Request[T]) GetUnmarshalled() (*T, error) {
+	body, err := r.Get()
+	if err != nil {
+		return r.Response, fmt.Errorf("could not complete API request: %w", err)
+	}
+
+	if err := json.Unmarshal(body, r.Response); err != nil {
+		return r.Response, fmt.Errorf("can't unmarshal JSON response: %w", err)
+	}
+
+	return r.Response, nil
 }

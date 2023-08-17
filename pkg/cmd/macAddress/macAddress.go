@@ -1,7 +1,6 @@
 package macAddress
 
 import (
-	"encoding/json"
 	"fmt"
 
 	"github.com/17xande/aoss/internal/api/request"
@@ -9,13 +8,8 @@ import (
 )
 
 type response struct {
-	CollectionResult     `json:"collection_result"`
-	MacTableEntryElement []MacTableEntryElement `json:"mac_table_entry_element"`
-}
-
-type CollectionResult struct {
-	TotalElementsCount    int `json:"total_elements_count"`
-	FilteredElementsCount int `json:"filtered_elements_count"`
+	request.CollectionResult `json:"collection_result"`
+	MacTableEntryElement     []MacTableEntryElement `json:"mac_table_entry_element"`
 }
 
 type MacTableEntryElement struct {
@@ -35,31 +29,33 @@ func NewCmdMacAddress() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:     "macAddress",
-		Short:   "Query mac addresses",
+		Short:   "Query mac addresses.",
 		Long:    "TODO:",
 		Example: "TODO:",
 		GroupID: "services",
 		RunE: func(c *cobra.Command, args []string) error {
 			host, _ := c.Flags().GetString("host")
-			var r *request.Request
 
 			if opts.port != "" && opts.mac != "" {
 				return fmt.Errorf("can't query both port and mac-address. Choose one or the other")
 			}
 
 			if opts.port != "" {
-				r = request.New(host, fmt.Sprintf("ports/%s/mac-table", opts.port))
+				r := request.New(host, fmt.Sprintf("ports/%s/mac-table", opts.port), response{})
+				return runE(r)
 			}
 
 			if opts.mac != "" {
-				r = request.New(host, "mac-table/"+opts.mac)
+				r := request.New(host, "mac-table/"+opts.mac, MacTableEntryElement{})
+				return runE(r)
 			}
 
 			if opts.port == "" && opts.mac == "" {
-				r = request.New(host, "mac-table")
+				r := request.New(host, fmt.Sprintf("ports/%s/mac-table", opts.port), response{})
+				return runE(r)
 			}
 
-			return runE(r)
+			return nil
 		},
 	}
 
@@ -69,21 +65,12 @@ func NewCmdMacAddress() *cobra.Command {
 	return cmd
 }
 
-func runE(r *request.Request) error {
-	body, err := r.Get()
+func runE[T response | MacTableEntryElement](r *request.Request[T]) error {
+	res, err := r.GetUnmarshalled()
 	if err != nil {
-		return fmt.Errorf("could not complete API request: %w", err)
-	}
-
-	var res response
-	err = json.Unmarshal(body, &res)
-	if err != nil {
-		return fmt.Errorf("can't unmarshal JSON response: %w", err)
+		return fmt.Errorf("couldn't complete API request: %w", err)
 	}
 
 	fmt.Printf("%#v\n", res)
-
-	// fmt.Println(res)
-
 	return nil
 }

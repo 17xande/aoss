@@ -1,7 +1,6 @@
 package remote
 
 import (
-	"encoding/json"
 	"fmt"
 
 	"github.com/17xande/aoss/internal/api/request"
@@ -9,10 +8,16 @@ import (
 )
 
 type remoteOptions struct {
-	port string
+	port   string
+	pretty bool
 }
 
 type response struct {
+	request.CollectionResult `json:"collection_result"`
+	LldpRemoteDeviceElement  []LldpRemoteDeviceElement `json:"lldp_remote_device_element"`
+}
+
+type LldpRemoteDeviceElement struct {
 	Uri                     string
 	LocalPort               string `json:"local_port"`
 	ChassisType             string `json:"chassis_type"`
@@ -62,38 +67,45 @@ func NewCmdRemote() *cobra.Command {
 		Example: "TODO:",
 		RunE: func(c *cobra.Command, args []string) error {
 			host, _ := c.Flags().GetString("host")
-			var r *request.Request
 
 			if opts.port != "" {
-				r = request.New(host, "lldp/remote-device/"+opts.port)
+				r := request.New(host, "lldp/remote-device/"+opts.port, LldpRemoteDeviceElement{})
+				if opts.pretty {
+					res, err := r.GetPretty()
+					if err != nil {
+						return err
+					}
+					fmt.Println(res)
+					return nil
+				}
+				return runE(r)
 			} else {
-				r = request.New(host, "lldp/remote-device")
+				r := request.New(host, "lldp/remote-device", response{})
+				if opts.pretty {
+					res, err := r.GetPretty()
+					if err != nil {
+						return err
+					}
+					fmt.Println(res)
+					return nil
+				}
+				return runE(r)
 			}
-
-			return runE(r)
 		},
 	}
 
 	cmd.Flags().StringVarP(&opts.port, "port", "p", "", "Port ID")
+	cmd.Flags().BoolVarP(&opts.pretty, "pretty", "P", false, "Pretty print")
 
 	return cmd
 }
 
-func runE(r *request.Request) error {
-	body, err := r.Get()
+func runE[T response | LldpRemoteDeviceElement](r *request.Request[T]) error {
+	res, err := r.GetUnmarshalled()
 	if err != nil {
-		return fmt.Errorf("can't complete API request: %w", err)
-	}
-
-	// fmt.Println(body)
-
-	var res response
-	err = json.Unmarshal(body, &res)
-	if err != nil {
-		return fmt.Errorf("can't unmarshal JSON response: %w", err)
+		return fmt.Errorf("couldn't complete API request: %w", err)
 	}
 
 	fmt.Printf("%#v\n", res)
-
 	return nil
 }

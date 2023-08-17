@@ -3,6 +3,7 @@ package root
 import (
 	"github.com/17xande/aoss/pkg/cmd/lldp"
 	"github.com/17xande/aoss/pkg/cmd/macAddress"
+	"github.com/17xande/aoss/pkg/cmd/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -31,18 +32,19 @@ $ aoss vlans 22`,
 
 	// Groups:
 	cmd.AddGroup(&cobra.Group{
-		ID:    "core",
-		Title: "Core commands",
+		ID:    "services",
+		Title: "Switch services",
 	})
 
 	cmd.AddGroup(&cobra.Group{
-		ID:    "services",
-		Title: "Switch services",
+		ID:    "core",
+		Title: "Core commands",
 	})
 
 	// Child commands:
 	cmd.AddCommand(macAddress.NewCmdMacAddress())
 	cmd.AddCommand(lldp.NewCmdLldp())
+	cmd.AddCommand(utils.NewCmdUtils())
 
 	return cmd, nil
 }
