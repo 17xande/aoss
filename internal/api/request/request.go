@@ -6,15 +6,17 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
+	"os"
+	"strings"
 )
 
 // Eg: http://192.168.0.1/rest/v1/
 const UrlAPI = "%s://%s/rest/%s/%s"
 
-type Request[T any] struct {
-	URL      url.URL
-	Response *T
+type loginResponse struct {
+	PayloadSize int
+	Uri         string
+	Cookie      string
 }
 
 type CollectionResult struct {
@@ -22,65 +24,111 @@ type CollectionResult struct {
 	FilteredElementsCount int `json:"filtered_elements_count"`
 }
 
-func New[T any](host, path string, response T) *Request[T] {
-	u := url.URL{
-		Scheme: "http",
-		Host:   host,
-		Path:   fmt.Sprintf("/rest/%s/%s", "v8", path),
+func GetUnmarshalled[T any](host, path string, cookie *http.Cookie, result *T) error {
+	res, err := get(host, path, cookie)
+	if err != nil {
+		return err
 	}
 
-	return &Request[T]{
-		URL:      u,
-		Response: &response,
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		return err
 	}
+
+	if err := json.Unmarshal(body, result); err != nil {
+		return fmt.Errorf("error unmarshalling result: %w", err)
+	}
+
+	return nil
 }
 
-func (r *Request[T]) GetPretty() (string, error) {
-	resBody, err := r.Get()
+func get(host, path string, cookie *http.Cookie) (*http.Response, error) {
+	url := fmt.Sprintf("http://%s/rest/v8/%s", host, path)
+
+	r, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
-		return "", fmt.Errorf("can't read response body: %w", err)
+		return nil, err
 	}
 
-	pretty, err := jsonIndent(resBody)
+	if cookie != nil {
+		r.AddCookie(cookie)
+	}
+
+	return http.DefaultClient.Do(r)
+}
+
+func post(host, path string, cookie *http.Cookie, body []byte) (*http.Response, error) {
+
+	return nil, nil
+}
+
+func GetJson(host, path string, cookie *http.Cookie) (string, error) {
+	res, err := get(host, path, cookie)
 	if err != nil {
 		return "", err
 	}
 
-	return pretty, nil
+	jsonRes, err := json.MarshalIndent(res.Body, "", "  ")
+	if err != nil {
+		return "", err
+	}
+
+	if res.StatusCode != 200 {
+		return string(jsonRes), fmt.Errorf("status code: %d", res.StatusCode)
+	}
+
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		return string(jsonRes), err
+	}
+
+	indented := bytes.Buffer{}
+	if err := json.Indent(&indented, body, "", "  "); err != nil {
+		return string(jsonRes), err
+	}
+
+	return indented.String(), nil
 }
 
-func (r *Request[T]) Get() ([]byte, error) {
-	req, err := http.NewRequest(http.MethodGet, r.URL.String(), nil)
+func authenticate(host string) (*http.Cookie, error) {
+	creds, err := readCreds()
 	if err != nil {
-		return nil, fmt.Errorf("can't create get request: %w", err)
+		return nil, err
 	}
 
-	res, err := http.DefaultClient.Do(req)
+	path := "/login-sessions"
+	res, err := post(host, path, nil, creds)
 	if err != nil {
-		return nil, fmt.Errorf("can't read response body: %w", err)
+		return nil, err
 	}
 
-	return io.ReadAll(res.Body)
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	var loginRes loginResponse
+
+	if err := json.Unmarshal(body, &loginRes); err != nil {
+		return nil, err
+	}
+
+	token := strings.Split(loginRes.Cookie, "=")[1]
+
+	cookie := &http.Cookie{
+		Name:   "sessionId",
+		Value:  token,
+		MaxAge: 90,
+	}
+
+	return cookie, nil
 }
 
-func jsonIndent(data []byte) (string, error) {
-	pretty := bytes.Buffer{}
-	if err := json.Indent(&pretty, data, "", "  "); err != nil {
-		return "", fmt.Errorf("can't pretty marshal data: %w", err)
-	}
-
-	return pretty.String(), nil
-}
-
-func (r *Request[T]) GetUnmarshalled() (*T, error) {
-	body, err := r.Get()
+func readCreds() ([]byte, error) {
+	creds, err := os.ReadFile("creds.json")
 	if err != nil {
-		return r.Response, fmt.Errorf("could not complete API request: %w", err)
+		return nil, fmt.Errorf("can't read credential file: %w", err)
 	}
 
-	if err := json.Unmarshal(body, r.Response); err != nil {
-		return r.Response, fmt.Errorf("can't unmarshal JSON response: %w", err)
-	}
-
-	return r.Response, nil
+	return creds, nil
 }

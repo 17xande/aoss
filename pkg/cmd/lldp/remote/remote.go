@@ -67,45 +67,45 @@ func NewCmdRemote() *cobra.Command {
 		Example: "TODO:",
 		RunE: func(c *cobra.Command, args []string) error {
 			host, _ := c.Flags().GetString("host")
+			path := "lldp/remote-device"
 
 			if opts.port != "" {
-				r := request.New(host, "lldp/remote-device/"+opts.port, LldpRemoteDeviceElement{})
-				if opts.pretty {
-					res, err := r.GetPretty()
-					if err != nil {
-						return err
-					}
-					fmt.Println(res)
-					return nil
-				}
-				return runE(r)
-			} else {
-				r := request.New(host, "lldp/remote-device", response{})
-				if opts.pretty {
-					res, err := r.GetPretty()
-					if err != nil {
-						return err
-					}
-					fmt.Println(res)
-					return nil
-				}
-				return runE(r)
+				path += "/" + opts.port
 			}
+
+			fmt.Println(path)
+
+			res, err := request.GetJson(host, path, nil)
+			if err != nil {
+				return err
+			}
+
+			fmt.Println(res)
+			return nil
 		},
 	}
 
 	cmd.Flags().StringVarP(&opts.port, "port", "p", "", "Port ID")
-	cmd.Flags().BoolVarP(&opts.pretty, "pretty", "P", false, "Pretty print")
 
 	return cmd
 }
 
-func runE[T response | LldpRemoteDeviceElement](r *request.Request[T]) error {
-	res, err := r.GetUnmarshalled()
-	if err != nil {
-		return fmt.Errorf("couldn't complete API request: %w", err)
+func GetLldpRemote(host, port string) (string, error) {
+	path := "lldp/remote-device/" + port
+	result := LldpRemoteDeviceElement{}
+	if err := request.GetUnmarshalled(host, path, nil, &result); err != nil {
+		return "", err
 	}
 
-	fmt.Printf("%#v\n", res)
-	return nil
+	if !result.CapabilitiesEnabled.Bridge {
+		// This is probably not a switch, return blank
+		return "", nil
+	}
+
+	for _, ip := range result.RemoteManagementAddress {
+		if ip.Type == "AFM_IP4" {
+			return ip.Address, nil
+		}
+	}
+	return "", fmt.Errorf("no lldp IPv4 address found on this port")
 }

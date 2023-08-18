@@ -20,3 +20,6 @@ aoss
 
 # Go workspace file
 go.work
+
+# Local credential file
+creds.json

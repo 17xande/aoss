@@ -35,26 +35,26 @@ func NewCmdMacAddress() *cobra.Command {
 		GroupID: "services",
 		RunE: func(c *cobra.Command, args []string) error {
 			host, _ := c.Flags().GetString("host")
+			path := "mac-table"
 
 			if opts.port != "" && opts.mac != "" {
 				return fmt.Errorf("can't query both port and mac-address. Choose one or the other")
 			}
 
-			if opts.port != "" {
-				r := request.New(host, fmt.Sprintf("ports/%s/mac-table", opts.port), Response{})
-				return runE(r)
-			}
-
-			if opts.mac != "" {
-				r := request.New(host, "mac-table/"+opts.mac, MacTableEntryElement{})
-				return runE(r)
-			}
-
 			if opts.port == "" && opts.mac == "" {
-				r := request.New(host, fmt.Sprintf("ports/%s/mac-table", opts.port), Response{})
-				return runE(r)
+				path = "mac-table"
+			} else if opts.port != "" {
+				path = fmt.Sprintf("ports/%s/mac-table", opts.port)
+			} else if opts.mac != "" {
+				path = "mac-table/" + opts.mac
 			}
 
+			res, err := request.GetJson(host, path, nil)
+			if err != nil {
+				return err
+			}
+
+			fmt.Println(res)
 			return nil
 		},
 	}
@@ -65,12 +65,22 @@ func NewCmdMacAddress() *cobra.Command {
 	return cmd
 }
 
-func runE[T Response | MacTableEntryElement](r *request.Request[T]) error {
-	res, err := r.GetUnmarshalled()
-	if err != nil {
-		return fmt.Errorf("couldn't complete API request: %w", err)
+func GetPortWithMac(host, mac string) (string, error) {
+	path := "mac-table/" + mac
+	result := MacTableEntryElement{}
+	if err := request.GetUnmarshalled(host, path, nil, &result); err != nil {
+		return "", err
 	}
 
-	fmt.Printf("%#v\n", res)
-	return nil
+	return result.PortID, nil
+}
+
+func GetMacCountAtPort(host, port string) (int, error) {
+	path := fmt.Sprintf("ports/%s/mac-table", port)
+	result := Response{}
+	if err := request.GetUnmarshalled(host, path, nil, &result); err != nil {
+		return 0, err
+	}
+
+	return result.CollectionResult.TotalElementsCount, nil
 }

@@ -3,7 +3,6 @@ package traceMac
 import (
 	"fmt"
 
-	"github.com/17xande/aoss/internal/api/request"
 	"github.com/17xande/aoss/pkg/cmd/lldp/remote"
 	"github.com/17xande/aoss/pkg/cmd/macAddress"
 	"github.com/spf13/cobra"
@@ -11,9 +10,6 @@ import (
 
 type traceMacOptions struct {
 	mac string
-}
-
-type response struct {
 }
 
 func NewCmdTraceMac() *cobra.Command {
@@ -43,53 +39,10 @@ func NewCmdTraceMac() *cobra.Command {
 	return cmd
 }
 
-func getPortWithMac(host, mac string) (string, error) {
-	r := request.New(host, "mac-table/"+mac, macAddress.MacTableEntryElement{})
-	res, err := r.GetUnmarshalled()
-
-	if err != nil {
-		return "", fmt.Errorf("couldn't complete API request: %w", err)
-	}
-
-	return res.PortID, nil
-}
-
-func getMacCountAtPort(host, port string) (int, error) {
-	r := request.New(host, fmt.Sprintf("ports/%s/mac-table", port), macAddress.Response{})
-	res, err := r.GetUnmarshalled()
-
-	if err != nil {
-		return 0, fmt.Errorf("couldn't complete API request: %w", err)
-	}
-
-	return res.CollectionResult.TotalElementsCount, nil
-}
-
-func getLldpRemote(host, port string) (string, error) {
-	r := request.New(host, "lldp/remote-device/"+port, remote.LldpRemoteDeviceElement{})
-	res, err := r.GetUnmarshalled()
-
-	if err != nil {
-		return "", fmt.Errorf("couldn't complete API request: %w", err)
-	}
-
-	if !res.CapabilitiesEnabled.Bridge {
-		// This is probably not a switch, return blank
-		return "", nil
-	}
-
-	for _, ip := range res.RemoteManagementAddress {
-		if ip.Type == "AFM_IP4" {
-			return ip.Address, nil
-		}
-	}
-	return "", fmt.Errorf("no lldp IPv4 address found on this port")
-}
-
 func trace(host, mac string) (string, string, error) {
 	for {
 		// Get port that has this MAC address registered.
-		port, err := getPortWithMac(host, mac)
+		port, err := macAddress.GetPortWithMac(host, mac)
 		if err != nil {
 			return "", "", err
 		}
@@ -97,7 +50,7 @@ func trace(host, mac string) (string, string, error) {
 		fmt.Printf("Port %s on %s has %s\n", port, host, mac)
 
 		// Check to see if this is the only mac address on that port.
-		count, err := getMacCountAtPort(host, port)
+		count, err := macAddress.GetMacCountAtPort(host, port)
 		if err != nil {
 			return "", "", err
 		}
@@ -108,7 +61,7 @@ func trace(host, mac string) (string, string, error) {
 			return host, port, nil
 		}
 
-		newHost, err := getLldpRemote(host, port)
+		newHost, err := remote.GetLldpRemote(host, port)
 		if err != nil {
 			return "", "", err
 		}
