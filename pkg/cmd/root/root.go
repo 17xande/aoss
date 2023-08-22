@@ -3,6 +3,7 @@ package root
 import (
 	"github.com/17xande/aoss/pkg/cmd/lldp"
 	"github.com/17xande/aoss/pkg/cmd/macAddress"
+	"github.com/17xande/aoss/pkg/cmd/system"
 	"github.com/17xande/aoss/pkg/cmd/utils"
 	"github.com/spf13/cobra"
 )
@@ -45,6 +46,7 @@ $ aoss vlans 22`,
 	cmd.AddCommand(macAddress.NewCmdMacAddress())
 	cmd.AddCommand(lldp.NewCmdLldp())
 	cmd.AddCommand(utils.NewCmdUtils())
+	cmd.AddCommand(system.NewCmdSystem())
 
 	return cmd, nil
 }

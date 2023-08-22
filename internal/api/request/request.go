@@ -24,8 +24,13 @@ type CollectionResult struct {
 	FilteredElementsCount int `json:"filtered_elements_count"`
 }
 
-func GetUnmarshalled[T any](host, path string, cookie *http.Cookie, result *T) error {
-	res, err := get(host, path, cookie)
+type Auth struct {
+	Host string
+	http.Cookie
+}
+
+func GetUnmarshalled[T any](host, path string, auth *Auth, result *T) error {
+	res, err := get(host, path, &auth.Cookie)
 	if err != nil {
 		return err
 	}
@@ -57,13 +62,47 @@ func get(host, path string, cookie *http.Cookie) (*http.Response, error) {
 	return http.DefaultClient.Do(r)
 }
 
-func post(host, path string, cookie *http.Cookie, body []byte) (*http.Response, error) {
+func post(host, path string, cookie *http.Cookie, body io.Reader) (*http.Response, error) {
+	url := fmt.Sprintf("http://%s/rest/v8/%s", host, path)
 
-	return nil, nil
+	r, err := http.NewRequest(http.MethodPost, url, body)
+	if err != nil {
+		return nil, fmt.Errorf("could not create post request: %w", err)
+	}
+
+	if cookie != nil {
+		r.AddCookie(cookie)
+	}
+
+	return http.DefaultClient.Do(r)
 }
 
-func GetJson(host, path string, cookie *http.Cookie) (string, error) {
-	res, err := get(host, path, cookie)
+func delete(host, path string, cookie *http.Cookie) (*http.Response, error) {
+	url := fmt.Sprintf("http://%s/rest/v8/%s", host, path)
+
+	r, err := http.NewRequest(http.MethodDelete, url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("could not create delete request: %w", err)
+	}
+
+	if cookie != nil {
+		r.AddCookie(cookie)
+	}
+
+	return http.DefaultClient.Do(r)
+}
+
+func GetJson(host, path string) (string, error) {
+	auth := Auth{
+		Host: host,
+	}
+
+	if err := auth.Login(); err != nil {
+		return "", fmt.Errorf("could not authenticate: %w", err)
+	}
+	defer auth.Logout()
+
+	res, err := get(host, path, &auth.Cookie)
 	if err != nil {
 		return "", err
 	}
@@ -73,7 +112,7 @@ func GetJson(host, path string, cookie *http.Cookie) (string, error) {
 		return "", err
 	}
 
-	if res.StatusCode != 200 {
+	if res.StatusCode != http.StatusOK {
 		return string(jsonRes), fmt.Errorf("status code: %d", res.StatusCode)
 	}
 
@@ -90,38 +129,56 @@ func GetJson(host, path string, cookie *http.Cookie) (string, error) {
 	return indented.String(), nil
 }
 
-func authenticate(host string) (*http.Cookie, error) {
+func (a *Auth) Login() error {
 	creds, err := readCreds()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
+	reader := bytes.NewReader(creds)
+
 	path := "/login-sessions"
-	res, err := post(host, path, nil, creds)
+	res, err := post(a.Host, path, nil, reader)
 	if err != nil {
-		return nil, err
+		return fmt.Errorf("post failed: %w", err)
 	}
 
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
-		return nil, err
+		return err
+	}
+
+	if res.StatusCode != http.StatusCreated {
+		return fmt.Errorf("authentication failed with status: %d\n%s", res.StatusCode, body)
 	}
 
 	var loginRes loginResponse
 
 	if err := json.Unmarshal(body, &loginRes); err != nil {
-		return nil, err
+		return err
 	}
 
 	token := strings.Split(loginRes.Cookie, "=")[1]
 
-	cookie := &http.Cookie{
+	a.Cookie = http.Cookie{
 		Name:   "sessionId",
 		Value:  token,
 		MaxAge: 90,
 	}
 
-	return cookie, nil
+	return nil
+}
+
+func (a *Auth) Logout() {
+	path := "/login-sessions"
+	res, err := delete(a.Host, path, &a.Cookie)
+	if err != nil {
+		fmt.Printf("error trying to logout: %v\n", err)
+	}
+
+	if res.StatusCode != http.StatusNoContent {
+		fmt.Printf("logout failed. Status: %d; Body: %v", res.StatusCode, res)
+	}
 }
 
 func readCreds() ([]byte, error) {

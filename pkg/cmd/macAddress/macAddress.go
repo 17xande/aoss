@@ -49,7 +49,7 @@ func NewCmdMacAddress() *cobra.Command {
 				path = "mac-table/" + opts.mac
 			}
 
-			res, err := request.GetJson(host, path, nil)
+			res, err := request.GetJson(host, path)
 			if err != nil {
 				return err
 			}
@@ -65,20 +65,20 @@ func NewCmdMacAddress() *cobra.Command {
 	return cmd
 }
 
-func GetPortWithMac(host, mac string) (string, error) {
+func GetPortWithMac(host, mac string, auth *request.Auth) (string, error) {
 	path := "mac-table/" + mac
 	result := MacTableEntryElement{}
-	if err := request.GetUnmarshalled(host, path, nil, &result); err != nil {
+	if err := request.GetUnmarshalled(host, path, auth, &result); err != nil {
 		return "", err
 	}
 
 	return result.PortID, nil
 }
 
-func GetMacCountAtPort(host, port string) (int, error) {
+func GetMacCountAtPort(host, port string, auth *request.Auth) (int, error) {
 	path := fmt.Sprintf("ports/%s/mac-table", port)
 	result := Response{}
-	if err := request.GetUnmarshalled(host, path, nil, &result); err != nil {
+	if err := request.GetUnmarshalled(host, path, auth, &result); err != nil {
 		return 0, err
 	}
 

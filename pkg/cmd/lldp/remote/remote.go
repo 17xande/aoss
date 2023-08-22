@@ -73,9 +73,7 @@ func NewCmdRemote() *cobra.Command {
 				path += "/" + opts.port
 			}
 
-			fmt.Println(path)
-
-			res, err := request.GetJson(host, path, nil)
+			res, err := request.GetJson(host, path)
 			if err != nil {
 				return err
 			}
@@ -90,10 +88,10 @@ func NewCmdRemote() *cobra.Command {
 	return cmd
 }
 
-func GetLldpRemote(host, port string) (string, error) {
+func GetLldpRemote(host, port string, auth *request.Auth) (string, error) {
 	path := "lldp/remote-device/" + port
 	result := LldpRemoteDeviceElement{}
-	if err := request.GetUnmarshalled(host, path, nil, &result); err != nil {
+	if err := request.GetUnmarshalled(host, path, auth, &result); err != nil {
 		return "", err
 	}
 

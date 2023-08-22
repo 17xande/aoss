@@ -3,6 +3,7 @@ package traceMac
 import (
 	"fmt"
 
+	"github.com/17xande/aoss/internal/api/request"
 	"github.com/17xande/aoss/pkg/cmd/lldp/remote"
 	"github.com/17xande/aoss/pkg/cmd/macAddress"
 	"github.com/spf13/cobra"
@@ -41,8 +42,17 @@ func NewCmdTraceMac() *cobra.Command {
 
 func trace(host, mac string) (string, string, error) {
 	for {
+		auth := request.Auth{
+			Host: host,
+		}
+
+		if err := auth.Login(); err != nil {
+			return "", "", fmt.Errorf("could not authenticate: %w", err)
+		}
+		defer auth.Logout()
+
 		// Get port that has this MAC address registered.
-		port, err := macAddress.GetPortWithMac(host, mac)
+		port, err := macAddress.GetPortWithMac(host, mac, &auth)
 		if err != nil {
 			return "", "", err
 		}
@@ -50,7 +60,7 @@ func trace(host, mac string) (string, string, error) {
 		fmt.Printf("Port %s on %s has %s\n", port, host, mac)
 
 		// Check to see if this is the only mac address on that port.
-		count, err := macAddress.GetMacCountAtPort(host, port)
+		count, err := macAddress.GetMacCountAtPort(host, port, &auth)
 		if err != nil {
 			return "", "", err
 		}
@@ -61,7 +71,7 @@ func trace(host, mac string) (string, string, error) {
 			return host, port, nil
 		}
 
-		newHost, err := remote.GetLldpRemote(host, port)
+		newHost, err := remote.GetLldpRemote(host, port, &auth)
 		if err != nil {
 			return "", "", err
 		}
