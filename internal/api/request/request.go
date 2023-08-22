@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"os"
 	"strings"
+
+	"github.com/17xande/configdir"
 )
 
 // Eg: http://192.168.0.1/rest/v1/
@@ -182,7 +184,8 @@ func (a *Auth) Logout() {
 }
 
 func readCreds() ([]byte, error) {
-	creds, err := os.ReadFile("creds.json")
+	path := configdir.LocalConfig("aoss/creds.json")
+	creds, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("can't read credential file: %w", err)
 	}

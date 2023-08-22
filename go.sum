@@ -1,3 +1,5 @@
+github.com/17xande/configdir v0.0.0-20230822134354-9441875917e7 h1:C5wjx8RnxNpSCQjMX4NWfeWjkmlaRWk1Sr/fQ0dR4oI=
+github.com/17xande/configdir v0.0.0-20230822134354-9441875917e7/go.mod h1:QdroZvxv+xvY8TtnEFTdH+IxNyiEO59JJpfKjTX74+E=
 github.com/cpuguy83/go-md2man/v2 v2.0.2/go.mod h1:tgQtvFlXSQOSOSIRvRPT7W67SCa46tRHOmNcaadrF8o=
 github.com/inconshreveable/mousetrap v1.1.0 h1:wN+x4NVGpMsO7ErUn/mUI3vEoE6Jt13X2s0bqwp9tc8=
 github.com/inconshreveable/mousetrap v1.1.0/go.mod h1:vpF70FUmC8bwa3OWnCshd2FqLfsEA9PFc4w1p2J65bw=
