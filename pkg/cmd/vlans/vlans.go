@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/17xande/aoss/internal/api/request"
+	"github.com/17xande/aoss/pkg/cmd/vlans/ports"
 	"github.com/spf13/cobra"
 )
 
@@ -52,6 +53,7 @@ func NewCmdVlans() *cobra.Command {
 	}
 
 	cmd.Flags().IntVarP(&opts.vlanID, "vlanID", "i", 0, "Vlan ID")
+	cmd.AddCommand(ports.NewCmdPorts())
 
 	return cmd
 }
