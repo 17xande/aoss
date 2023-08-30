@@ -49,6 +49,37 @@ func GetUnmarshalled[T any](host, path string, auth *Auth, result *T) error {
 	return nil
 }
 
+func PostUnmarshalled[T any](host, path string, auth *Auth, req *T) (*http.Response, error) {
+	body, err := json.Marshal(req)
+	if err != nil {
+		return nil, fmt.Errorf("can't marshall request: %w", err)
+	}
+
+	reader := bytes.NewReader(body)
+
+	res, err := post(host, path, &auth.Cookie, reader)
+	if err != nil {
+		return nil, fmt.Errorf("can't run PUT request: %w", err)
+	}
+
+	return res, nil
+}
+
+func put(host, path string, cookie *http.Cookie, body io.Reader) (*http.Response, error) {
+	url := fmt.Sprintf("http://%s/rest/v8/%s", host, path)
+
+	r, err := http.NewRequest(http.MethodPut, url, body)
+	if err != nil {
+		return nil, err
+	}
+
+	if cookie != nil {
+		r.AddCookie(cookie)
+	}
+
+	return http.DefaultClient.Do(r)
+}
+
 func get(host, path string, cookie *http.Cookie) (*http.Response, error) {
 	url := fmt.Sprintf("http://%s/rest/v8/%s", host, path)
 
@@ -109,23 +140,18 @@ func GetJson(host, path string) (string, error) {
 		return "", err
 	}
 
-	jsonRes, err := json.MarshalIndent(res.Body, "", "  ")
+	body, err := io.ReadAll(res.Body)
 	if err != nil {
 		return "", err
 	}
 
 	if res.StatusCode != http.StatusOK {
-		return string(jsonRes), fmt.Errorf("status code: %d", res.StatusCode)
-	}
-
-	body, err := io.ReadAll(res.Body)
-	if err != nil {
-		return string(jsonRes), err
+		return string(body), fmt.Errorf("status code: %d", res.StatusCode)
 	}
 
 	indented := bytes.Buffer{}
 	if err := json.Indent(&indented, body, "", "  "); err != nil {
-		return string(jsonRes), err
+		return string(body), err
 	}
 
 	return indented.String(), nil

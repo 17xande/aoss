@@ -14,8 +14,7 @@ func NewCmdRoot() (*cobra.Command, error) {
 		Use:   "aoss <command> <subcommand> [flags]",
 		Short: "ArubaOs-Switches CLI",
 		Long:  `Work with Aruba Switches running the legacy AOS-S`,
-		Example: `
-$ aoss macAddress 000000-111111 --host=192.168.0.1
+		Example: `$ aoss macAddress 000000-111111 --host=192.168.0.1
 $ aoss lldp remoteDevices 22 --auth=creds.toml
 $ aoss vlans 22`,
 		Annotations: map[string]string{
@@ -30,6 +29,7 @@ $ aoss vlans 22`,
 
 	cmd.PersistentFlags().BoolP("help", "H", false, "Show help for command")
 	cmd.PersistentFlags().StringP("host", "h", "", "Switch's hostname or IP address (required)")
+	cmd.PersistentFlags().BoolP("config", "C", false, "Config mode - make changes to the device")
 	cmd.MarkPersistentFlagRequired("host")
 
 	// Groups:
