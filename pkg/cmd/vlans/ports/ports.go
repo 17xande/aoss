@@ -84,7 +84,9 @@ func putConfig(vlanID int, portID, tagging, host, path, tag string) error {
 	if err := auth.Login(); err != nil {
 		return fmt.Errorf("could not authenticate: %w", err)
 	}
-	defer auth.Logout()
+	if auth.Cookie.Raw != "" {
+		defer auth.Logout()
+	}
 
 	p := ports{
 		Uri:      fmt.Sprintf("vlans-ports/%d-%s", vlanID, portID),

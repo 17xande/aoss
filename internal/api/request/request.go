@@ -133,7 +133,9 @@ func GetJson(host, path string) (string, error) {
 	if err := auth.Login(); err != nil {
 		return "", fmt.Errorf("could not authenticate: %w", err)
 	}
-	defer auth.Logout()
+	if auth.Cookie.Raw != "" {
+		defer auth.Logout()
+	}
 
 	res, err := get(host, path, &auth.Cookie)
 	if err != nil {
@@ -174,6 +176,13 @@ func (a *Auth) Login() error {
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
 		return err
+	}
+
+	// If the StatusCode is a 400, it's likely that the REST API authentication is disabled.
+	// Just exit without an error here to allow the request to continue without authentication.
+	// This is not a good way to detect if auth is enabled, but I have not been able to find another way.
+	if res.StatusCode == http.StatusBadRequest {
+		return nil
 	}
 
 	if res.StatusCode != http.StatusCreated {

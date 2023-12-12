@@ -42,6 +42,7 @@ func NewCmdTraceMac() *cobra.Command {
 
 func trace(host, mac string) (string, string, error) {
 	for {
+		// TODO: test if auth is enabled on the switch.
 		auth := request.Auth{
 			Host: host,
 		}
@@ -49,7 +50,9 @@ func trace(host, mac string) (string, string, error) {
 		if err := auth.Login(); err != nil {
 			return "", "", fmt.Errorf("could not authenticate: %w", err)
 		}
-		defer auth.Logout()
+		if auth.Cookie.Raw != "" {
+			defer auth.Logout()
+		}
 
 		// Get port that has this MAC address registered.
 		port, err := macAddress.GetPortWithMac(host, mac, &auth)
@@ -68,6 +71,8 @@ func trace(host, mac string) (string, string, error) {
 		if count == 1 {
 			// Only one device at this port, this is not a switch,
 			// this is the device we're looking for.
+			// TODO: this is not the best method of determining that this is the
+			// device we're looking for, but it's working for now.
 			return host, port, nil
 		}
 
