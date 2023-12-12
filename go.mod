@@ -4,7 +4,7 @@ go 1.21.0
 
 require (
 	github.com/17xande/configdir v0.0.0-20230822134354-9441875917e7
-	github.com/spf13/cobra v1.7.0
+	github.com/spf13/cobra v1.8.0
 )
 
 require (
